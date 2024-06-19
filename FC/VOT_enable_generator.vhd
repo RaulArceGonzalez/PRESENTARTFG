@@ -1,0 +1,61 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+use work.tfg_irene_package.ALL;
+
+entity VOT_enable_generator is
+    Port ( 
+           data_fc_1 : in std_logic;
+           en_neuron_1 : in std_logic;
+           addr_FC_1 : in std_logic_vector(log2c(biggest_ROM_size)-1 downto 0);
+           bit_select_1 : in unsigned(log2c(input_size_L1fc)-1 downto 0);
+           next_pipeline_step_1: in std_logic;
+           addr_Sm_1 : in std_logic_vector(log2c(number_of_outputs_L4fc) - 1 downto 0 );
+           exp_Sm_1: in std_logic;
+           inv_Sm_1: in std_logic;
+           sum_finish_1: in std_logic;
+           enable_lastlayer_1 : in STD_LOGIC;
+           data_fc_2 : in std_logic;
+           en_neuron_2 : in std_logic;
+           addr_FC_2 : in std_logic_vector(log2c(biggest_ROM_size)-1 downto 0);
+           bit_select_2 : in unsigned(log2c(input_size_L1fc)-1 downto 0);
+           next_pipeline_step_2: in std_logic;
+           addr_Sm_2 : in std_logic_vector(log2c(number_of_outputs_L4fc) - 1 downto 0 );
+           exp_Sm_2: in std_logic;
+           inv_Sm_2: in std_logic;
+           sum_finish_2: in std_logic;
+           enable_lastlayer_2 : in STD_LOGIC;
+           data_fc_3 : in std_logic;
+           en_neuron_3 : in std_logic;
+           addr_FC_3 : in std_logic_vector(log2c(biggest_ROM_size)-1 downto 0);
+           bit_select_3 : in unsigned(log2c(input_size_L1fc)-1 downto 0);
+           next_pipeline_step_3: in std_logic;
+           addr_Sm_3 : in std_logic_vector(log2c(number_of_outputs_L4fc) - 1 downto 0 );
+           exp_Sm_3: in std_logic;
+           inv_Sm_3: in std_logic;
+           sum_finish_3: in std_logic;
+           enable_lastlayer_3 : in STD_LOGIC;
+           data_fc : out std_logic;
+           en_neuron : out std_logic;
+           addr_FC : out std_logic_vector(log2c(biggest_ROM_size)-1 downto 0);
+           bit_select : out unsigned(log2c(input_size_L1fc)-1 downto 0);
+           next_pipeline_step: out std_logic;
+           addr_Sm : out std_logic_vector(log2c(number_of_outputs_L4fc) - 1 downto 0 );
+           exp_Sm: out std_logic;
+           inv_Sm: out std_logic;
+           sum_finish: out std_logic;
+           enable_lastlayer : out STD_LOGIC);
+end VOT_enable_generator;
+architecture Behavioral of VOT_enable_generator is
+begin
+data_fc <= (data_fc_1 and data_fc_2) or (data_fc_1 and data_fc_3) or (data_fc_2 and data_fc_3);
+en_neuron <= (en_neuron_1 and en_neuron_2) or (en_neuron_1 and en_neuron_3) or (en_neuron_2 and en_neuron_3);
+addr_FC <= (addr_FC_1 and addr_FC_2) or (addr_FC_1 and addr_FC_3) or (addr_FC_2 and addr_FC_3);
+bit_select <= (bit_select_1 and bit_select_2) or (bit_select_1 and bit_select_3) or (bit_select_2 and bit_select_3);
+next_pipeline_step <= (next_pipeline_step_1 and next_pipeline_step_2) or (next_pipeline_step_1 and next_pipeline_step_3) or (next_pipeline_step_2 and next_pipeline_step_3);
+addr_Sm <= (addr_Sm_1 and addr_Sm_2) or (addr_Sm_1 and addr_Sm_3) or (addr_Sm_2 and addr_Sm_3);
+exp_Sm <= (exp_Sm_1 and exp_Sm_2) or (exp_Sm_1 and exp_Sm_3) or (exp_Sm_2 and exp_Sm_3);
+inv_Sm <= (inv_Sm_1 and inv_Sm_2) or (inv_Sm_1 and inv_Sm_3) or (inv_Sm_2 and inv_Sm_3);
+sum_finish <= (sum_finish_1 and sum_finish_2) or (sum_finish_1 and sum_finish_3) or (sum_finish_2 and sum_finish_3);
+enable_lastlayer <= (enable_lastlayer_1 and enable_lastlayer_2) or (enable_lastlayer_1 and enable_lastlayer_3) or (enable_lastlayer_2 and enable_lastlayer_3);
+end Behavioral;
