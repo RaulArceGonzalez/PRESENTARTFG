@@ -1,0 +1,169 @@
+--------------------------FC NEURON MODULE------------------------------------
+-- This module performs the MAAC operation which consists of the addition of each multiplication of a signal by its corresponding weight.
+-- It is performed by adding a 1 each time the input pulse indicates that the signal is not zero. 
+---INPUTS
+-- data_in : each bit of the input data.
+-- rom_addr : indicates which weight to operate with, corresponding to the input_data
+-- next_pipeline_step : notifies when all the input data has been processed and moves on to the next set of data.
+-- bit select : indicates which bit of the input data we are receiving at each moment.
+---OUTPUTS
+-- neuron_mac : the output is the accumulation of the input signals multiplied by the respective weights.
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE work.tfg_irene_package.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.MATH_REAL.ALL;
+
+ENTITY layer3_FCneuron_5 IS
+	PORT (
+		clk : IN STD_LOGIC;
+		rst : IN STD_LOGIC;
+		data_in_bit : IN STD_LOGIC;
+		next_pipeline_step : IN STD_LOGIC;
+		bit_select : IN unsigned (log2c(input_size_L3fc) - 1 DOWNTO 0);
+		rom_addr : IN STD_LOGIC_VECTOR (log2c(number_of_layers3) + log2c(result_size) - 1 DOWNTO 0);
+		neuron_mac : OUT STD_LOGIC_VECTOR (input_size_L3fc + weight_size_L3fc + n_extra_bits - 1 DOWNTO 0));
+END layer3_FCneuron_5;
+
+ARCHITECTURE Behavioral OF layer3_FCneuron_5 IS
+
+	SIGNAL mac_out_next, mac_out_reg : signed (input_size_L3fc + weight_size_L3fc + n_extra_bits - 1 DOWNTO 0) := "0000000000000000000"; --We add extra bits for precision.
+	SIGNAL mux_out3 : signed (input_size_L3fc + weight_size_L3fc + n_extra_bits - 1 DOWNTO 0) := (OTHERS => '0');
+	SIGNAL weight, aux_weight : signed (weight_size_L3fc - 1 DOWNTO 0);
+	SIGNAL mux_out1, mux_out2, extended_weight, shifted_weight_next, shifted_weight_reg : signed (weight_size_L3fc + input_size_L3fc - 2 DOWNTO 0);
+	-- Only need to shift (input_size-1) times - e.g. 7 shifts if input_size = 8, hence the "-2".
+
+BEGIN
+
+	-- Register --
+	PROCESS (clk)
+	BEGIN
+		IF rising_edge(clk) THEN
+			IF (rst = '0') THEN
+				mac_out_reg <= "0000000000000000000";
+				shifted_weight_reg <= (OTHERS => '0');
+			ELSE
+				mac_out_reg <= mac_out_next;
+				shifted_weight_reg <= shifted_weight_next;
+			END IF;
+		END IF;
+	END PROCESS;
+
+	-- Weight extension
+	extended_weight <= resize(weight, weight_size_L3fc + input_size_L3fc - 1); -- As we shift the signals (input_size - 1 we need to resize it accordingly (weight_size + input_size - 1).
+
+	-- Shift block --
+	mux_out1 <= extended_weight WHEN (bit_select = "000") ELSE
+		shifted_weight_reg;
+
+	shifted_weight_next <= mux_out1(weight_size_L3fc + input_size_L3fc - n_extra_bits DOWNTO 0) & '0'; -- Logic Shift Left
+
+	-- Addition block
+	PROCESS (data_in_bit, mux_out1) --If the input bit is 1 we add the shifted weight to the accumulated result.  
+	BEGIN
+		IF (data_in_bit = '1') THEN
+			mux_out2 <= mux_out1;
+		ELSE
+			mux_out2 <= (OTHERS => '0');
+		END IF;
+	END PROCESS;
+	mux_out3 <= resize(mux_out2, input_size_L3fc + weight_size_L3fc + n_extra_bits);
+
+	PROCESS (next_pipeline_step, mac_out_reg, mac_out_next, mux_out3) --if next_pipeline_step = '1' it means that the MAAC operation is finished and we reset the result to the bias_term (offset) else we accumulate the result of the multiplications.
+	BEGIN
+		IF (next_pipeline_step = '1') THEN
+			mac_out_next <= "0000000000000000000"; --We add the bias_term as an offset at the beggining of each operation.
+		ELSE
+			mac_out_next <= mac_out_reg + mux_out3;
+		END IF;
+	END PROCESS;
+	neuron_mac <= STD_LOGIC_VECTOR(mac_out_reg);
+	-- ROM --
+	WITH rom_addr SELECT weight <=
+
+		"00010100" WHEN "000000000", -- Weight 0  
+		"00000000" WHEN "000000001", -- Weight 1  
+		"11110000" WHEN "000000010", -- Weight 2  
+		"11110100" WHEN "000000011", -- Weight 3  
+		"11010100" WHEN "000000100", -- Weight 4  
+		"00011000" WHEN "000000101", -- Weight 5  
+		"11001000" WHEN "000000110", -- Weight 6  
+		"11001100" WHEN "000000111", -- Weight 7  
+		"00011100" WHEN "000001000", -- Weight 8  
+		"00000000" WHEN "000001001", -- Weight 9  
+		"11110000" WHEN "000001010", -- Weight 10  
+		"00000100" WHEN "000001011", -- Weight 11  
+		"00001000" WHEN "000001100", -- Weight 12  
+		"00100000" WHEN "000001101", -- Weight 13  
+		"00000100" WHEN "000001110", -- Weight 14  
+		"00001100" WHEN "000001111", -- Weight 15  
+		"11101100" WHEN "000010000", -- Weight 16  
+		"00000000" WHEN "000010001", -- Weight 17  
+		"00010100" WHEN "000010010", -- Weight 18  
+		"00001100" WHEN "000010011", -- Weight 19  
+		"00011000" WHEN "000010100", -- Weight 20  
+		"11100100" WHEN "000010101", -- Weight 21  
+		"11011100" WHEN "000010110", -- Weight 22  
+		"00011100" WHEN "000010111", -- Weight 23  
+		"00011100" WHEN "000011000", -- Weight 24  
+		"11100100" WHEN "000011001", -- Weight 25  
+		"11010000" WHEN "000011010", -- Weight 26  
+		"00011100" WHEN "000011011", -- Weight 27  
+		"11011000" WHEN "000011100", -- Weight 28  
+		"11111100" WHEN "000011101", -- Weight 29  
+		"00001000" WHEN "000011110", -- Weight 30  
+		"00000000" WHEN "000011111", -- Weight 31  
+		"11111000" WHEN "000100000", -- Weight 32  
+		"00001000" WHEN "000100001", -- Weight 33  
+		"11011100" WHEN "000100010", -- Weight 34  
+		"00100100" WHEN "000100011", -- Weight 35  
+		"00001100" WHEN "000100100", -- Weight 36  
+		"00001100" WHEN "000100101", -- Weight 37  
+		"00000000" WHEN "000100110", -- Weight 38  
+		"00001000" WHEN "000100111", -- Weight 39  
+		"00010100" WHEN "000101000", -- Weight 40  
+		"00011000" WHEN "000101001", -- Weight 41  
+		"11011100" WHEN "000101010", -- Weight 42  
+		"00000100" WHEN "000101011", -- Weight 43  
+		"00100000" WHEN "000101100", -- Weight 44  
+		"11011100" WHEN "000101101", -- Weight 45  
+		"00000100" WHEN "000101110", -- Weight 46  
+		"00011100" WHEN "000101111", -- Weight 47  
+		"00101000" WHEN "000110000", -- Weight 48  
+		"00001000" WHEN "000110001", -- Weight 49  
+		"00100100" WHEN "000110010", -- Weight 50  
+		"11100100" WHEN "000110011", -- Weight 51  
+		"11111100" WHEN "000110100", -- Weight 52  
+		"11011100" WHEN "000110101", -- Weight 53  
+		"11101100" WHEN "000110110", -- Weight 54  
+		"00000100" WHEN "000110111", -- Weight 55  
+		"11100100" WHEN "000111000", -- Weight 56  
+		"00001100" WHEN "000111001", -- Weight 57  
+		"00001100" WHEN "000111010", -- Weight 58  
+		"11101000" WHEN "000111011", -- Weight 59  
+		"11101000" WHEN "000111100", -- Weight 60  
+		"00011000" WHEN "000111101", -- Weight 61  
+		"11110000" WHEN "000111110", -- Weight 62  
+		"00011100" WHEN "000111111", -- Weight 63  
+		"11110100" WHEN "001000000", -- Weight 64  
+		"00001100" WHEN "001000001", -- Weight 65  
+		"11110000" WHEN "001000010", -- Weight 66  
+		"00010000" WHEN "001000011", -- Weight 67  
+		"00100000" WHEN "001000100", -- Weight 68  
+		"11011100" WHEN "001000101", -- Weight 69  
+		"00001000" WHEN "001000110", -- Weight 70  
+		"11110000" WHEN "001000111", -- Weight 71  
+		"11101000" WHEN "001001000", -- Weight 72  
+		"11110100" WHEN "001001001", -- Weight 73  
+		"00011100" WHEN "001001010", -- Weight 74  
+		"11100100" WHEN "001001011", -- Weight 75  
+		"00011000" WHEN "001001100", -- Weight 76  
+		"00010000" WHEN "001001101", -- Weight 77  
+		"11011100" WHEN "001001110", -- Weight 78  
+		"11100100" WHEN "001001111", -- Weight 79  
+		"11010100" WHEN "001010000", -- Weight 80  
+		"11100100" WHEN "001010001", -- Weight 81  
+		"11011100" WHEN "001010010", -- Weight 82  
+		"00001100" WHEN "001010011", -- Weight 83  
+		"00000000" WHEN OTHERS;
+END Behavioral;
