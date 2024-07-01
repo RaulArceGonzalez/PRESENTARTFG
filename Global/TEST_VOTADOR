@@ -1,0 +1,55 @@
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use work.tfg_irene_package.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+--use IEEE.NUMERIC_STD.ALL;
+
+-- Uncomment the following library declaration if instantiating
+-- any Xilinx leaf cells in this code.
+--library UNISIM;
+--use UNISIM.VComponents.all;
+
+entity testvectores is
+--  Port ( );
+end testvectores;
+
+
+architecture Behavioral of testvectores is
+
+component VOT_CONVP13 is
+	 Port ( 
+	     data_out_1 : in std_logic_vector(input_sizeL1 + weight_sizeL1 + n_extra_bits - 1 downto 0);
+	     data_out_2 : in std_logic_vector(input_sizeL1 + weight_sizeL1 + n_extra_bits - 1 downto 0);
+	     data_out_3 : in std_logic_vector(input_sizeL1 + weight_sizeL1 + n_extra_bits - 1 downto 0);
+	     data_out_v : out std_logic_vector(input_sizeL1 + weight_sizeL1 + n_extra_bits - 1 downto 0));
+end component; 
+signal data_out_1,data_out_2,data_out_3,y : std_logic_vector(input_sizeL1 + weight_sizeL1 + n_extra_bits - 1 downto 0);
+--declaracion señale auxiliares de salida
+begin
+uut_neural: VOT_CONVP13
+    PORT MAP (
+            data_out_1 => data_out_1,
+            data_out_2 => data_out_2,
+            data_out_3 => data_out_3,
+            data_out_v => y);
+
+
+
+r_process: process
+begin
+    data_out_1 <= "000000000000000000";
+    data_out_2 <= "000000000000000000";
+    data_out_3 <= "000000000000000000";
+    wait for 10us;
+    data_out_1 <= "111111010101010010";
+    data_out_2 <= "111111010100110100";
+    data_out_3 <= "111111010101101000";
+    wait;
+end process;
+
+
+end Behavioral;
